@@ -1,63 +1,68 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import {Terminal} from "@xterm/xterm";
-import {AttachAddon} from "@xterm/addon-attach";
+import { ref, onMounted, watch } from 'vue';
+import { Terminal } from "@xterm/xterm";
+import { AttachAddon } from "@xterm/addon-attach";
 import '@xterm/xterm/css/xterm.css'
-import '@xterm/xterm/lib/xterm.js'
-
-
 import { FitAddon } from '@xterm/addon-fit';
 
+
+// Define the containerId as a prop
+const props = defineProps({
+  containerId: {
+    type: String,
+    required: true
+  },
+});
+
 const terminal = new Terminal();
-terminal.options.theme.background = "#0f172a"
-terminal.options.scrollback = 0
+terminal.options.theme.background = "#0f172a";
 const fitAddon = new FitAddon();
 
-
 const container = ref(null);
+const error = reactive({
+  status: false,
+  message: ''
+})
 
-function initTerminal(){
-  const terminal = new Terminal();
-  const socket = new WebSocket("ws://10.200.10.201:2376/containers/f546cb8a7b5a/attach/ws?stream=1&stdout=1&stdin=1&logs=1")
-  const attachAddon = new AttachAddon(socket)
+function initTerminal() {
+  if (!props.containerId) {
+    console.error('Container ID is required');
+    return;
+  }
+
+  const socket = new WebSocket(`ws://192.168.1.154:2376/containers/${props.containerId}/attach/ws?stream=1&stdout=1&stdin=1&logs=1`);
+  socket.onerror = (event) => {
+    error.status = true
+    error.message = "Error Code D1001"
+    console.log(event)
+  }
+
+  const attachAddon = new AttachAddon(socket);
   terminal.loadAddon(fitAddon);
-  terminal.loadAddon(attachAddon)
+  terminal.loadAddon(attachAddon);
   terminal.open(container.value);
-  terminal.write('clear\r');
   fitAddon.fit();
 }
 
-onMounted(initTerminal)
+onMounted(initTerminal);
+
+// Watch for changes in containerId and reinitialize the terminal
+watch(() => props.containerId, () => {
+  terminal.clear();
+  initTerminal();
+});
 </script>
 
 
 <template>
-  <div>
-    <UContainer>
-      <div ref="container" class="overflow-hidden no-scrollbar"></div>
-    </UContainer>
+  <div class="w-full h-full m:h-[70vh]">
+    <div ref="container" class="h-[100%] w-100">
+      <p v-if="error.status" class="px-4 text-red-500 text-sm"> Error: Cannot get user environment: {{error.message}}</p>
+    </div>
+
   </div>
 </template>
 
 <style scoped>
-.xterm .xterm-viewport {
-  overflow: hidden;
-}
 
-.xterm {
-  background-color: white; /* Replace with your desired color */
-}
-
-.xterm .xterm-scroll-area {
-  overflow: hidden;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-/* Hide scrollbar for IE, Edge and Firefox */
-.no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
 </style>

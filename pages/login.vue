@@ -1,39 +1,52 @@
 <script setup lang="ts">
+import { z } from 'zod'
+import { useAuthStore } from '~/store/auth';
 import type { FormError, FormSubmitEvent } from '#ui/types'
 
+const form = ref()
+const router = useRouter()
+const authStore = useAuthStore()
+
+const schema = z.object({
+  username: z.string(),
+  password: z.string().min(8, 'Must be at least 8 characters')
+})
+
+type Schema = z.output<typeof schema>
+
 const state = reactive({
-  email: undefined,
+  username: undefined,
   password: undefined
 })
 
-const form = ref()
 
-async function onSubmit (event: FormSubmitEvent<any>) {
-  form.value.clear()
-  try {
-    const response = await $fetch('...')
-  } catch (err) {
-    if (err.statusCode === 422) {
-      form.value.setErrors(err.data.errors.map((err) => ({
-        // Map validation errors to { path: string, message: string }
-        message: err.message,
-        path: err.path,
-      })))
+async function onSubmit (event: FormSubmitEvent<Schema>) {
+    authStore.reset()
+    await authStore.login(event.data)
+
+    if(authStore.isAuthenticated){
+      await router.push("/")
     }
-  }
 }
+
+
+
+
+
 </script>
 
 <template>
-  <div class="grid grid-cols-12 content-center h-screen">
+  <div class="grid px-10 md:px-0 lg:px-0 md:grid-cols-12 lg:grid-cols-12 content-center h-screen">
       <div class="col-start-6 col-span-2 space-y-8">
         <div class="space-y-4">
-          <p class="text-4xl font-semibold"> Welcome to UITS Unix Lab</p>
-          <p class="text-sm"> Enter username and password to continue</p>
+          <p class="text-3xl font-semibold">💻</p>
+          <p class="text-4xl font-semibold">Welcome to syslab.</p>
         </div>
         <UForm ref="form" :state="state" @submit="onSubmit" class="space-y-4">
+          <p class="text-sm"> Enter username and password</p>
+          <p v-if="authStore.isError.status" class="text-sm text-red-500"> {{ authStore.isError.message}}</p>
           <UFormGroup name="email">
-            <UInput v-model="state.email" />
+            <UInput v-model="state.username" />
           </UFormGroup>
 
           <UFormGroup name="password">
@@ -41,8 +54,9 @@ async function onSubmit (event: FormSubmitEvent<any>) {
           </UFormGroup>
 
           <UButton type="submit" block color="red">
-            Submit
+            <p class="font-bold">Submit</p>
           </UButton>
+          <UProgress v-if="authStore.isLoading" animation="carousel" color="red"/>
         </UForm>
       </div>
     </div>
