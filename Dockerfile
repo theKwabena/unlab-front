@@ -3,26 +3,21 @@ ARG NODE_VERSION=20.14.0
 # Create build stage
 FROM node:${NODE_VERSION}-slim AS build
 
-# Enable pnpm
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy package.json and pnpm-lock.yaml files to the working directory
+# Copy package.json and package-lock.json files to the working directory
 COPY ./package.json /app/
-COPY ./pnpm-lock.yaml /app/
+COPY ./package-lock.json /app/
 
 ## Install dependencies
-RUN pnpm install --shamefully-hoist
+RUN npm install
 
 # Copy the rest of the application files to the working directory
 COPY . ./
 
 # Build the application
-RUN pnpm run build
+RUN npm run build
 
 # Create a new stage for the production image
 FROM node:${NODE_VERSION}-slim
@@ -41,4 +36,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Start the application
-CMD ["node","/app/server/index.mjs"]
+CMD ["node", "/app/server/index.mjs"]

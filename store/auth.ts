@@ -20,7 +20,7 @@ export const useAuthStore = defineStore('auth', ()=> {
         isLoading.value = true
         payload.append('username', username)
         payload.append('password', password)
-        const {data, clear, error, status }: any = await useFetch('http://localhost:8000/login/access-token', {
+        const {data, clear, error, status }: any = await useFetch(`${process.env.BACKEND_URL}:8000/login/access-token`, {
             method: 'POST',
             body: payload,
             server: false
